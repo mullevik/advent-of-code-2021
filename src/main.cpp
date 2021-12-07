@@ -6,11 +6,17 @@
 #include <exception>
 #include <cassert>
 #include <cmath>
+#include <algorithm>
+#include <set>
 
 // Use (void) to silent unused warnings.
 #define assertm(exp, msg) assert(((void)msg, exp))
 
 using namespace std;
+
+int parse_int(const string& s) {
+    return stoi(s);
+}
 
 vector<string> split(const string& sentence, const string& delimiter) {
     vector<string> words;
@@ -23,10 +29,12 @@ vector<string> split(const string& sentence, const string& delimiter) {
         int found_index = sentence.find(delimiter, last_found_index);
 
         if (found_index == string::npos) {
-            words.push_back(sentence.substr(last_found_index, delimiter.size() - last_found_index));
+            auto word = sentence.substr(last_found_index, delimiter.size() - last_found_index);
+            if (word != "") words.push_back(word);
             return words;
         } else {
-            words.push_back(sentence.substr(last_found_index, found_index - last_found_index));
+            auto word = sentence.substr(last_found_index, found_index - last_found_index);
+            if (word != "") words.push_back(word);
             last_found_index = found_index + delimiter.size();
         }
     }
@@ -43,7 +51,15 @@ void test_split() {
     assert(split("single-word").size() == 1);
     assert(split("single-word", "-").size() == 2);
     assert(split("long text, with, commas,", ",").size() == 3);
+    assert(split("1  2    3 4").size() == 4);
     cout << "test_split passed" << endl;
+}
+
+vector<int> numbers_from_line(const string& line, const string& delimiter = " ") {
+    vector<int> numbers;
+    vector<string> words = split(line, delimiter);
+    for_each(words.begin(), words.end(), [&](string x){numbers.push_back(parse_int(x));});
+    return numbers;
 }
 
 
@@ -58,10 +74,6 @@ vector<string> read_lines(const string& file_name) {
         input_lines.push_back(line);
     }
     return input_lines;
-}
-
-int parse_int(const string& s) {
-    return stoi(s);
 }
 
 vector<int> read_lines_as_integers(const string& file_name) {
@@ -211,6 +223,142 @@ void day_03() {
     cout << oxygen_rating * co2_rating << endl;
 }
 
-int main() { 
+typedef struct {
+    vector<vector<int>> numbers;
+    vector<vector<bool>> mask;
+
+} BingoTable;
+
+BingoTable create_bingo_table(const vector<string>& table_lines) {
+    vector<vector<int>> table;
+    vector<vector<bool>> mask;
     
+
+    for (auto line : table_lines) {
+        vector<int> numbers = numbers_from_line(line);
+        vector<bool> empty = vector<bool>(numbers.size(), false);
+        table.push_back(numbers);
+        mask.push_back(empty);
+    }
+    auto bingo_table = BingoTable{table, mask};
+    return bingo_table;
+}
+
+vector<BingoTable> extract_bingo_tables(const vector<string>& lines) {
+
+    vector<BingoTable> bingo_tables;
+
+    int line_index = 0;
+    while ((line_index < lines.size()) and (lines[line_index] == "")) {
+
+        int table_index = line_index + 1;
+        vector<string> table_lines;
+        while ((table_index < lines.size()) and (lines[table_index] != "")) {
+            table_lines.push_back(lines[table_index]);
+            table_index ++;
+        }
+        bingo_tables.push_back(create_bingo_table(table_lines));
+
+        line_index = table_index;
+    }
+    return bingo_tables;
+}
+
+void print_table(const BingoTable& t) {
+    cout << "TABLE" << endl;
+    for (auto row : t.numbers) {
+        for (auto col : row) {
+            cout << col << " ";
+        }
+        cout << endl;
+    }
+    cout << endl;
+    for (auto row : t.mask) {
+        for (auto col : row) {
+            cout << col << " ";
+        }
+        cout << endl;
+    }
+}
+
+
+void burn_number(BingoTable& t, int number) {
+
+    for (int r = 0; r < t.numbers.size(); r++) {
+        for (int c = 0; c < t.numbers[r].size(); c++) {
+
+            if (t.numbers[r][c] == number) {
+                t.mask[r][c] = true;
+            }
+        }
+    }
+    // print_table(t);
+}
+
+bool has_row(const BingoTable& t) {
+    for (int r = 0; r < t.numbers.size(); r++) {
+        if (all_of(t.mask[r].cbegin(), t.mask[r].cend(), [](bool x){return x;})) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool has_column(const BingoTable& t) {
+    
+    for (int c = 0; c < t.numbers[0].size(); c++) {
+        vector<bool> column_mask;
+        for (int r = 0; r < t.numbers.size(); r++) {
+            column_mask.push_back(t.mask[r][c]);
+        }
+        
+        if (all_of(column_mask.cbegin(), column_mask.cend(), [](bool x){return x;})) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool has_won(const BingoTable& t) {
+    return has_row(t) or has_column(t);
+}
+
+int unmarked_score(const BingoTable& t) {
+    int result = 0;
+    for (int r = 0; r < t.numbers.size(); r++) {
+        for (int c = 0; c < t.numbers[r].size(); c++) {
+            if (not t.mask[r][c]) result += t.numbers[r][c];
+        }
+    }
+    return result;
+}
+
+int main() {
+
+    auto input_lines = read_lines("inputs/day-04/input.txt");
+
+    auto numbers = numbers_from_line(input_lines[0], ",");
+
+    auto table_lines = vector<string>(input_lines.begin() + 1, input_lines.end());
+    auto bingo_tables = extract_bingo_tables(table_lines);
+    set<int> won_table_indices;
+
+    for (int number : numbers) {
+
+        for (int i = 0; i < bingo_tables.size(); i ++) {
+            auto t = bingo_tables[i];
+            burn_number(t, number);
+            bingo_tables[i] = t;
+
+            if (has_won(t)) {
+                won_table_indices.insert(i);
+                if (won_table_indices.size() == bingo_tables.size()) {
+                    int score = unmarked_score(t);
+                    print_table(t);
+                    cout << score * number << endl;
+                    cout << endl;
+                }
+            }
+        }
+    }
 }
