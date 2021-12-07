@@ -333,8 +333,7 @@ int unmarked_score(const BingoTable& t) {
     return result;
 }
 
-int main() {
-
+void day_04() {
     auto input_lines = read_lines("inputs/day-04/input.txt");
 
     auto numbers = numbers_from_line(input_lines[0], ",");
@@ -361,4 +360,81 @@ int main() {
             }
         }
     }
+}
+
+typedef struct {
+    pair<int, int> source;
+    pair<int, int> target;
+    bool is_vertical;
+    bool is_diagonal;
+    bool has_positive_direction;
+} Line;
+
+
+Line create_line(const string& text_line) {
+    auto words = split(text_line, "->");
+    auto source_words = split(words[0], ",");
+    auto target_words = split(words[1], ",");
+    
+
+    pair<int, int> source = make_pair(parse_int(source_words[0]), parse_int(source_words[1]));
+    pair<int, int> target = make_pair(parse_int(target_words[0]), parse_int(target_words[1]));
+
+
+    bool is_vertical = source.first == target.first;
+    bool is_diagonal = (source.first != target.first) and (source.second != target.second);
+    bool has_positive_direction;
+
+    if (is_diagonal) {
+        has_positive_direction = (source.second < target.second);
+    } else {
+        has_positive_direction = (source.first < target.first) or (source.second < target.second);
+    }
+
+    auto line = Line{source, target, is_vertical, is_diagonal, has_positive_direction};
+    return line;
+}
+
+vector<Line> extract_lines(const vector<string>& text_lines) {
+    vector<Line> lines;
+    for_each(text_lines.cbegin(), text_lines.cend(), [&](string x){lines.push_back(create_line(x));});
+    return lines;
+}
+
+int draw_line(const Line& line, vector<vector<int>>& map) {
+    if (line.is_diagonal) return 0;
+
+    auto start = (line.has_positive_direction) ? line.source : line.target;
+    auto end = (line.has_positive_direction) ? line.target : line.source;
+
+    auto start_index = (line.is_vertical) ? start.second : start.first;
+    auto end_index = (line.is_vertical) ? end.second : end.first;
+
+
+    int n_twos_update = 0;
+
+    for (int i = start_index; i < end_index + 1; i ++) {
+        int x = (line.is_vertical) ? start.first : i;
+        int y = (line.is_vertical) ? i : start.second;
+
+        if (map[y][x] == 1) n_twos_update += 1;
+        map[y][x] += 1;
+    }
+    return n_twos_update;
+}
+
+
+int main() {
+    auto input_lines = read_lines("inputs/day-05/input.txt");
+
+    auto lines = extract_lines(input_lines);
+    vector<vector<int>> map(1000, vector<int>(1000, 0));
+
+    int n_twos = 0;
+    
+    for (auto line : lines) {
+        n_twos += draw_line(line, map);
+    }
+
+    cout << n_twos << endl;
 }
