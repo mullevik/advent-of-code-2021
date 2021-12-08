@@ -9,80 +9,14 @@
 #include <algorithm>
 #include <set>
 
+#include "utils.hpp"
+#include "coordinates.hpp"
+
 // Use (void) to silent unused warnings.
 #define assertm(exp, msg) assert(((void)msg, exp))
 
 using namespace std;
 
-int parse_int(const string& s) {
-    return stoi(s);
-}
-
-vector<string> split(const string& sentence, const string& delimiter) {
-    vector<string> words;
-    istringstream iss(sentence);
-
-    size_t last_found_index = 0;
-    
-    while (last_found_index < sentence.size()) {
-
-        int found_index = sentence.find(delimiter, last_found_index);
-
-        if (found_index == string::npos) {
-            auto word = sentence.substr(last_found_index, delimiter.size() - last_found_index);
-            if (word != "") words.push_back(word);
-            return words;
-        } else {
-            auto word = sentence.substr(last_found_index, found_index - last_found_index);
-            if (word != "") words.push_back(word);
-            last_found_index = found_index + delimiter.size();
-        }
-    }
-    return words;
-}
-
-vector<string> split(const string& sentence) {
-    return split(sentence, " ");
-}
-
-
-void test_split() {
-    assert(split("Hello world").size() == 2);
-    assert(split("single-word").size() == 1);
-    assert(split("single-word", "-").size() == 2);
-    assert(split("long text, with, commas,", ",").size() == 3);
-    assert(split("1  2    3 4").size() == 4);
-    cout << "test_split passed" << endl;
-}
-
-vector<int> numbers_from_line(const string& line, const string& delimiter = " ") {
-    vector<int> numbers;
-    vector<string> words = split(line, delimiter);
-    for_each(words.begin(), words.end(), [&](string x){numbers.push_back(parse_int(x));});
-    return numbers;
-}
-
-
-vector<string> read_lines(const string& file_name) {
-    ifstream fs(file_name);
-    if (!fs.good()) {
-        throw invalid_argument("File not found: " + file_name);
-    }
-    vector<string> input_lines;
-    string line;
-    while (getline(fs, line)) {
-        input_lines.push_back(line);
-    }
-    return input_lines;
-}
-
-vector<int> read_lines_as_integers(const string& file_name) {
-    vector<int> integers;
-    for (auto line : read_lines(file_name)) {
-        integers.push_back(parse_int(line));
-    }
-    return integers;
-}
 
 struct Instruction {
     string name;
@@ -370,71 +304,6 @@ typedef struct {
 } Line;
 
 
-class Coordinates {
-    int x_part;
-    int y_part;
-public:
-    Coordinates(int x, int y): x_part(x), y_part(y) {}
-    Coordinates(const Coordinates& other): x_part(other.x()), y_part(other.y()) {}
-    
-    const int x() const {return this->x_part;}
-    const int y() const {return this->y_part;}
-    
-    friend bool operator==(const Coordinates& lhs, const Coordinates& rhs) {
-        return lhs.x() == rhs.x() and lhs.y() == rhs.y();
-    }
-    friend bool operator!=(const Coordinates& lhs, const Coordinates& rhs) {
-        return ! (lhs == rhs);
-    }
-    friend Coordinates operator+(const Coordinates& lhs, const Coordinates& rhs) {
-        auto new_coordinates = Coordinates(lhs.x() + rhs.x(), lhs.y() + rhs.y());
-        return new_coordinates;
-    }
-    friend ostream& operator<< (ostream& stream, const Coordinates& coords) {
-        stream << "(" << coords.x() << ", " << coords.y() << ")";
-        return stream;
-    }
-};
-
-class CoordinatesLine {
-    Coordinates s;
-    Coordinates t;
-public:
-    CoordinatesLine(const Coordinates& source, const Coordinates& target): s(source), t(target) {}
-    CoordinatesLine(const CoordinatesLine& other): s(other.source()), t(other.target()) {}
-
-    const Coordinates source() const {return this->s;}
-    const Coordinates target() const {return this->t;}
-    const Coordinates direction() const {
-        int x_distance = -(this->s.x() - this->t.x());
-        if (x_distance > 0) x_distance = 1;
-        if (x_distance < 0) x_distance = -1;
-
-        int y_distance = -(this->s.y() - this->t.y());
-        if (y_distance > 0) y_distance = 1;
-        if (y_distance < 0) y_distance = -1;
-
-        return Coordinates(x_distance, y_distance);
-    }
-};
-
-void test_Coordinates() {
-    auto a = Coordinates(1, 1);
-    auto b = Coordinates(-2, 3);
-
-    cout << a << endl;
-
-    auto c = a;
-    auto d = a + b;
-
-    assert(c.x() == 1 and c.y() == 1);
-    assert(d.x() == -1 and d.y() == 4);
-
-    a = b;
-    assert(c.x() == 1 and c.y() == 1);
-    assert(a.x() == -2 and a.y() == 3);
-    cout << "test_Coordinates passed" << endl;
-}
 
 
 CoordinatesLine create_line(const string& text_line) {
@@ -489,5 +358,5 @@ void day_05() {
 }
 
 int main () {
-    day_05();
+    test_Coordinates();
 }
