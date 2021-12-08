@@ -365,66 +365,115 @@ void day_04() {
 typedef struct {
     pair<int, int> source;
     pair<int, int> target;
-    bool is_vertical;
+    pair<int, int> direction;
     bool is_diagonal;
-    bool has_positive_direction;
 } Line;
 
 
-Line create_line(const string& text_line) {
+class Coordinates {
+    int x_part;
+    int y_part;
+public:
+    Coordinates(int x, int y): x_part(x), y_part(y) {}
+    Coordinates(const Coordinates& other): x_part(other.x()), y_part(other.y()) {}
+    
+    const int x() const {return this->x_part;}
+    const int y() const {return this->y_part;}
+    
+    friend bool operator==(const Coordinates& lhs, const Coordinates& rhs) {
+        return lhs.x() == rhs.x() and lhs.y() == rhs.y();
+    }
+    friend bool operator!=(const Coordinates& lhs, const Coordinates& rhs) {
+        return ! (lhs == rhs);
+    }
+    friend Coordinates operator+(const Coordinates& lhs, const Coordinates& rhs) {
+        auto new_coordinates = Coordinates(lhs.x() + rhs.x(), lhs.y() + rhs.y());
+        return new_coordinates;
+    }
+    friend ostream& operator<< (ostream& stream, const Coordinates& coords) {
+        stream << "(" << coords.x() << ", " << coords.y() << ")";
+        return stream;
+    }
+};
+
+class CoordinatesLine {
+    Coordinates s;
+    Coordinates t;
+public:
+    CoordinatesLine(const Coordinates& source, const Coordinates& target): s(source), t(target) {}
+    CoordinatesLine(const CoordinatesLine& other): s(other.source()), t(other.target()) {}
+
+    const Coordinates source() const {return this->s;}
+    const Coordinates target() const {return this->t;}
+    const Coordinates direction() const {
+        int x_distance = -(this->s.x() - this->t.x());
+        if (x_distance > 0) x_distance = 1;
+        if (x_distance < 0) x_distance = -1;
+
+        int y_distance = -(this->s.y() - this->t.y());
+        if (y_distance > 0) y_distance = 1;
+        if (y_distance < 0) y_distance = -1;
+
+        return Coordinates(x_distance, y_distance);
+    }
+};
+
+void test_Coordinates() {
+    auto a = Coordinates(1, 1);
+    auto b = Coordinates(-2, 3);
+
+    cout << a << endl;
+
+    auto c = a;
+    auto d = a + b;
+
+    assert(c.x() == 1 and c.y() == 1);
+    assert(d.x() == -1 and d.y() == 4);
+
+    a = b;
+    assert(c.x() == 1 and c.y() == 1);
+    assert(a.x() == -2 and a.y() == 3);
+    cout << "test_Coordinates passed" << endl;
+}
+
+
+CoordinatesLine create_line(const string& text_line) {
     auto words = split(text_line, "->");
     auto source_words = split(words[0], ",");
     auto target_words = split(words[1], ",");
     
 
-    pair<int, int> source = make_pair(parse_int(source_words[0]), parse_int(source_words[1]));
-    pair<int, int> target = make_pair(parse_int(target_words[0]), parse_int(target_words[1]));
+    auto source = Coordinates(parse_int(source_words[0]), parse_int(source_words[1]));
+    auto target = Coordinates(parse_int(target_words[0]), parse_int(target_words[1]));
 
-
-    bool is_vertical = source.first == target.first;
-    bool is_diagonal = (source.first != target.first) and (source.second != target.second);
-    bool has_positive_direction;
-
-    if (is_diagonal) {
-        has_positive_direction = (source.second < target.second);
-    } else {
-        has_positive_direction = (source.first < target.first) or (source.second < target.second);
-    }
-
-    auto line = Line{source, target, is_vertical, is_diagonal, has_positive_direction};
-    return line;
+    return CoordinatesLine(source, target);
 }
 
-vector<Line> extract_lines(const vector<string>& text_lines) {
-    vector<Line> lines;
+vector<CoordinatesLine> extract_lines(const vector<string>& text_lines) {
+    vector<CoordinatesLine> lines;
     for_each(text_lines.cbegin(), text_lines.cend(), [&](string x){lines.push_back(create_line(x));});
     return lines;
 }
 
-int draw_line(const Line& line, vector<vector<int>>& map) {
-    if (line.is_diagonal) return 0;
-
-    auto start = (line.has_positive_direction) ? line.source : line.target;
-    auto end = (line.has_positive_direction) ? line.target : line.source;
-
-    auto start_index = (line.is_vertical) ? start.second : start.first;
-    auto end_index = (line.is_vertical) ? end.second : end.first;
-
-
+int draw_line(const CoordinatesLine& line, vector<vector<int>>& map) {
+    // if (line.is_diagonal) return 0;
     int n_twos_update = 0;
 
-    for (int i = start_index; i < end_index + 1; i ++) {
-        int x = (line.is_vertical) ? start.first : i;
-        int y = (line.is_vertical) ? i : start.second;
+    auto current = line.source();
 
-        if (map[y][x] == 1) n_twos_update += 1;
-        map[y][x] += 1;
+    while (current != line.target()) {
+        if (map[current.y()][current.x()] == 1) n_twos_update += 1;
+        map[current.y()][current.x()] += 1;
+        current = current + line.direction();
     }
+    if (map[current.y()][current.x()] == 1) n_twos_update += 1;
+    map[current.y()][current.x()] += 1;
+
     return n_twos_update;
 }
 
 
-int main() {
+void day_05() {
     auto input_lines = read_lines("inputs/day-05/input.txt");
 
     auto lines = extract_lines(input_lines);
@@ -437,4 +486,8 @@ int main() {
     }
 
     cout << n_twos << endl;
+}
+
+int main () {
+    day_05();
 }
