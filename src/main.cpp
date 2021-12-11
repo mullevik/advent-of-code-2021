@@ -358,5 +358,23 @@ void day_05() {
 }
 
 int main () {
-    test_Coordinates();
+    auto lines = read_lines("inputs/day-06/input.txt");
+    auto fish_numbers = numbers_from_line(lines[0], ",");
+
+    int n_days = 80;
+
+    for (int day_number = 0; day_number < n_days; day_number ++) {
+        auto n_fish = fish_numbers.size();
+        for (int i = 0; i < n_fish; i ++) {
+            auto fish_number = fish_numbers[i];
+            if (fish_number == 0) {
+                fish_numbers.push_back(8);
+                fish_numbers[i] = 6;
+            } else {
+                fish_numbers[i] -= 1;
+            }
+        }
+    }
+
+    cout << fish_numbers.size() << endl;
 }
